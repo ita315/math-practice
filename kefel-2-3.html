@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>כמה דקות ביום — מתחזקות בכפל ובחילוק</title>
+<style>
+:root{
+  --bg1:#fdf0f7; --bg2:#eaf4ff;
+  --card:#ffffff; --ink:#2b2748; --muted:#55516f;
+  --pink:#fcd9e8; --pink-b:#f3a9c9;
+  --sky:#d6eaff; --sky-b:#9cc7f5;
+  --lilac:#e6ddfc; --lilac-b:#bba8f2;
+  --peach:#ffe4cf; --peach-b:#f6b88c;
+  --lemon:#fff3c4; --lemon-b:#f0d36a;
+  --mint:#d4f4e2; --mint-b:#86d3a8; --green-ink:#17603a;
+  --primary:#6a48cf; --primary-dark:#5233b0; --primary-soft:#efeaff;
+  --radius:26px; --shadow:0 8px 24px rgba(80,60,150,.12);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;padding:0}
+body{
+  font-family:"Segoe UI","Noto Sans Hebrew","Arial Hebrew",Arial,Helvetica,sans-serif;
+  color:var(--ink);
+  background:linear-gradient(165deg,var(--bg1) 0%,#f6f0ff 45%,var(--bg2) 100%);
+  background-attachment:fixed;
+  min-height:100vh; overflow-x:hidden;
+  font-size:19px; line-height:1.55;
+}
+#app{max-width:860px;margin:0 auto;padding:18px 16px 40px}
+button{font-family:inherit;color:inherit}
+:focus-visible{outline:4px solid #8d6bf0;outline-offset:3px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0}
+.math{direction:ltr;unicode-bidi:isolate;display:inline-block;font-weight:700;white-space:nowrap}
+
+/* ---------- דמות הכוכב ---------- */
+.mascot{width:84px;height:84px;flex:0 0 auto;display:inline-block}
+.mascot svg{width:100%;height:100%;display:block;animation:float 4s ease-in-out infinite;overflow:visible}
+.mascot-sm{width:70px;height:70px}
+.mascot-lg{width:124px;height:124px}
+.mascot.hop{animation:hop .7s ease-out}
+.mascot.think{animation:tilt .8s ease-in-out}
+.mascot.celebrate{animation:hop .8s ease-out 2}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes hop{0%{transform:translateY(0)}30%{transform:translateY(-22px) scale(1.06)}55%{transform:translateY(0) scale(1.05,.95)}75%{transform:translateY(-6px)}100%{transform:translateY(0)}}
+@keyframes tilt{0%,100%{transform:rotate(0)}30%{transform:rotate(-8deg)}65%{transform:rotate(6deg)}}
+
+.mascot-wrap{position:relative;flex:0 0 auto}
+.sparkles{position:absolute;inset:0;pointer-events:none}
+.spark{position:absolute;left:50%;top:45%;font-size:20px;color:#f5b400;animation:spark .75s ease-out forwards;text-shadow:0 0 6px #fff6c8}
+.spark:nth-child(even){color:#e77fb5}
+@keyframes spark{0%{transform:translate(-50%,-50%) scale(.3);opacity:1}100%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.1);opacity:0}}
+
+/* ---------- מסך ראשי ---------- */
+.hero{text-align:center;padding:10px 4px 6px}
+.hero h1{font-size:clamp(1.55rem,5.4vw,2.3rem);line-height:1.25;margin:8px 0 6px;color:#3d2f86}
+.hero h1 span{display:inline-block;color:var(--primary)}
+.lead{margin:0 auto 18px;max-width:34em;color:var(--muted);font-size:1.05rem}
+.days{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:16px}
+.day-card{
+  border:3px solid transparent;border-radius:var(--radius);padding:18px 18px 16px;text-align:right;
+  cursor:pointer;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:4px;
+  transition:transform .15s ease, box-shadow .15s ease;font-size:1rem;min-height:170px
+}
+.day-card:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(80,60,150,.18)}
+.day-card.c-pink{background:var(--pink);border-color:var(--pink-b)}
+.day-card.c-sky{background:var(--sky);border-color:var(--sky-b)}
+.day-card.c-lilac{background:var(--lilac);border-color:var(--lilac-b)}
+.day-card.c-peach{background:var(--peach);border-color:var(--peach-b)}
+.day-card.done{background:var(--mint);border-color:var(--mint-b)}
+.day-title{font-size:1.6rem;font-weight:800}
+.day-desc{font-size:1.1rem;font-weight:700}
+.day-struct{color:var(--muted);font-size:.98rem}
+.day-status{margin-top:auto;padding-top:8px;font-weight:700;font-size:1rem}
+.day-status .pill{display:inline-block;background:rgba(255,255,255,.75);border-radius:999px;padding:4px 14px}
+.day-card.done .day-status .pill{background:#fff;color:var(--green-ink);border:2px solid var(--mint-b)}
+.foot{text-align:center;margin-top:26px;color:var(--muted);font-size:.95rem}
+.foot .note{margin:0 0 8px}
+.link-btn{background:none;border:none;color:#5b4a99;text-decoration:underline;cursor:pointer;font-size:.92rem;padding:6px 10px;border-radius:10px}
+
+/* ---------- סרגל עליון ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.back-btn{background:#fff;border:2px solid var(--lilac-b);border-radius:999px;padding:8px 18px;font-size:1rem;font-weight:700;cursor:pointer;min-height:44px}
+.back-btn:hover{background:var(--primary-soft)}
+.topinfo{display:flex;flex-direction:column;text-align:left;line-height:1.3}
+.topinfo strong{font-size:1.15rem}
+.topinfo span{color:var(--muted);font-size:.95rem}
+
+/* ---------- כרטיס תרגול ---------- */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 18px 24px}
+.progress-text{font-weight:700;font-size:1.05rem;margin-bottom:6px}
+.progress{height:14px;background:#eee8fb;border-radius:999px;overflow:hidden}
+.progress-fill{height:100%;width:0;background:linear-gradient(90deg,#b49cf7,#f3a3c8);border-radius:999px;transition:width .4s ease}
+.stage{display:flex;align-items:center;gap:14px;margin:18px 0 6px}
+.bubble{
+  flex:1;min-height:58px;background:var(--primary-soft);border-radius:20px;padding:12px 16px;
+  font-size:1.1rem;font-weight:700;position:relative;display:flex;align-items:center
+}
+.bubble::before{content:"";position:absolute;right:-9px;top:50%;margin-top:-9px;border:9px solid transparent;border-right:0;border-left-color:var(--bubble-bg,var(--primary-soft))}
+.bubble.pop{animation:pop .25s ease-out}
+.bubble.ok{background:var(--mint);--bubble-bg:var(--mint)}
+.bubble.hint{background:var(--lemon);--bubble-bg:var(--lemon)}
+.bubble.sol{background:var(--sky);--bubble-bg:var(--sky)}
+.bubble.info{background:var(--peach);--bubble-bg:var(--peach)}
+@keyframes pop{from{transform:scale(.94);opacity:.2}to{transform:scale(1);opacity:1}}
+
+.exercise{
+  direction:ltr;display:flex;justify-content:center;align-items:center;gap:.35em;flex-wrap:wrap;
+  font-size:clamp(2.6rem,12vw,4.3rem);font-weight:800;margin:14px 0 12px;letter-spacing:.02em
+}
+.exercise .op{color:var(--primary)}
+.qmark{min-width:1.6em;padding:0 .2em;text-align:center;border:3px dashed #c8b9f5;border-radius:18px;color:#8a78c9;line-height:1.25}
+.qmark.ok{border:3px solid var(--mint-b);background:var(--mint);color:var(--green-ink)}
+.qmark.shown{border:3px solid var(--sky-b);background:var(--sky);color:#1f4f86}
+
+.answer-row{display:flex;justify-content:center;align-items:stretch;gap:12px;flex-wrap:wrap}
+.answer-row input{
+  width:min(200px,100%);font-size:2.1rem;font-weight:800;text-align:center;direction:ltr;
+  border:3px solid #cfc3f5;border-radius:20px;padding:8px 10px;background:#fbf9ff;color:var(--ink);font-family:inherit
+}
+.answer-row input:focus{border-color:var(--primary);outline:none;box-shadow:0 0 0 4px #ddd2ff}
+.answer-row input[readonly]{background:#f2f0f7;color:#6b6788}
+.btn{border:none;border-radius:20px;padding:12px 26px;font-size:1.25rem;font-weight:800;cursor:pointer;min-height:56px;transition:transform .1s ease,background .15s}
+.btn:active{transform:scale(.97)}
+.btn.primary{background:var(--primary);color:#fff;box-shadow:0 5px 0 var(--primary-dark)}
+.btn.primary:hover{background:#5d3cc6}
+.btn.primary:disabled{background:#b9add9;box-shadow:none;cursor:default}
+.btn.secondary{background:#fff;color:var(--primary-dark);border:3px solid var(--primary)}
+.btn.secondary:hover{background:var(--primary-soft)}
+.btn.soft{background:var(--lemon);color:#5a4500;border:3px solid var(--lemon-b)}
+
+.help{margin-top:16px}
+.hint-card,.sol-card{border-radius:20px;padding:14px 18px;font-size:1.12rem;animation:pop .25s ease-out}
+.hint-card{background:#fffaf0;border:3px solid var(--lemon-b)}
+.sol-card{background:#f2f8ff;border:3px solid var(--sky-b)}
+.sol-card.good{background:#effbf4;border-color:var(--mint-b)}
+.sol-main{font-size:1.5rem;margin-bottom:4px}
+.continue-row{text-align:center;margin-top:16px}
+
+/* ---------- בעיה מילולית ---------- */
+.word-badge{display:inline-block;background:var(--peach);border:2px solid var(--peach-b);border-radius:999px;padding:3px 14px;font-weight:800;font-size:.95rem}
+.word-text{font-size:1.32rem;font-weight:600;margin:12px 0 16px;line-height:1.6}
+.op-label{font-weight:700;margin-bottom:8px}
+.op-choose{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:16px}
+.op-btn{background:#fff;border:3px solid #d6cbf6;border-radius:20px;padding:10px 22px;font-size:1.2rem;font-weight:800;cursor:pointer;min-height:56px;min-width:130px}
+.op-btn .op-sym{font-size:1.5rem;color:var(--primary);margin-left:6px}
+.op-btn[aria-pressed="true"]{background:var(--primary-soft);border-color:var(--primary);box-shadow:inset 0 0 0 2px var(--primary)}
+.op-btn[aria-pressed="true"]::after{content:" ✓";color:var(--primary)}
+.op-btn:disabled{cursor:default;opacity:.8}
+
+/* ---------- סיכום ---------- */
+.summary{text-align:center}
+.summary h2{font-size:clamp(1.6rem,6vw,2.2rem);margin:8px 0 2px;color:#3d2f86}
+.done-note{display:inline-block;background:var(--mint);border:2px solid var(--mint-b);color:var(--green-ink);border-radius:999px;padding:3px 16px;font-weight:700;margin:4px 0 14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;margin:8px 0 16px}
+.stat{border-radius:22px;padding:14px 12px;border:3px solid}
+.stat.s-mul{background:var(--pink);border-color:var(--pink-b)}
+.stat.s-div{background:var(--sky);border-color:var(--sky-b)}
+.stat.s-word{background:var(--peach);border-color:var(--peach-b)}
+.stat-title{font-weight:800;font-size:1.1rem}
+.stat-num{font-size:1.9rem;font-weight:800;margin:2px 0}
+.stat-label{font-size:.95rem;color:var(--muted)}
+.encourage{font-size:1.18rem;font-weight:600;background:var(--lemon);border-radius:20px;padding:12px 16px;margin:0 0 18px}
+.actions{display:flex;flex-direction:column;gap:12px;align-items:center}
+.actions .btn{width:min(100%,420px)}
+
+/* ---------- קונפטי ---------- */
+.confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:50}
+.confetti i{position:absolute;top:-30px;display:block;width:11px;height:16px;border-radius:3px;animation:fall linear forwards;font-style:normal}
+.confetti i.star{width:auto;height:auto;background:none!important;font-size:22px;color:#f5b400}
+@keyframes fall{0%{transform:translateY(0) rotate(0)}100%{transform:translateY(112vh) rotate(var(--rot))}}
+
+@media (max-width:480px){
+  body{font-size:18px}
+  #app{padding:12px 12px 32px}
+  .card{padding:16px 14px 20px}
+  .mascot{width:70px;height:70px}
+  .mascot-lg{width:108px;height:108px}
+  .bubble{font-size:1.02rem}
+  .topinfo{text-align:right}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+'use strict';
+
+/* =====================================================================
+   הגדרות השבוע — זה המקום היחיד שצריך לשנות כשעוברים לשבוע חדש
+   ---------------------------------------------------------------------
+   WEEK_TABLES — הכפולות של השבוע, בתוך סוגריים מרובעים.
+     • יום 1 מתרגל את הכפולה הראשונה, יום 2 את השנייה,
+       וימים 3–4 משלבים את כל הכפולות שבחרתן.
+     • דוגמה לשבוע של כפולות 4 ו־5:   const WEEK_TABLES = [4, 5];
+   MAX_FACTOR — עד איזה מספר כופלים (ברירת מחדל 10, כלומר עד 3×10).
+   כותרות הימים, התרגילים, הרמזים והבעיות המילוליות מתעדכנים לבד.
+   ההתקדמות (ימים שהושלמו) נשמרת בנפרד לכל הרכב כפולות,
+   כך ששבוע חדש יתחיל נקי, בלי סימוני ״הושלם״ מהשבוע הקודם.
+   ===================================================================== */
+const WEEK_TABLES = [2, 3];
+const MAX_FACTOR = 10;
+/* ===================================================================== */
+
+const TABLES = Array.from(new Set(WEEK_TABLES.map(Number).filter(n => Number.isInteger(n) && n >= 1)));
+if (!TABLES.length) TABLES.push(2);
+const MAX = Math.max(2, Math.floor(Number(MAX_FACTOR)) || 10);
+const MUL_COUNT = 8, DIV_COUNT = 12;
+
+/* ---------- כלי עזר ---------- */
+const rnd = n => Math.floor(Math.random() * n);
+const pick = arr => arr[rnd(arr.length)];
+function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function range(from, to) { const r = []; for (let i = from; i <= to; i++) r.push(i); return r; }
+function joinHeb(nums) { return nums.length === 1 ? String(nums[0]) : nums.slice(0, -1).join(', ') + ' ו־' + nums[nums.length - 1]; }
+const m = s => `<span class="math" dir="ltr">${s}</span>`;
+const lastPicked = {};
+function pickFresh(name, arr) { let v; let guard = 0; do { v = pick(arr); guard++; } while (arr.length > 1 && v === lastPicked[name] && guard < 20); lastPicked[name] = v; return v; }
+
+/* ---------- הימים ---------- */
+const T1 = TABLES[0], T2 = TABLES[1] !== undefined ? TABLES[1] : TABLES[0];
+const DAYS = [
+  { id: 1, title: 'יום 1', tables: [T1], desc: 'כפולות ' + T1, color: 'pink', wordTypes: ['mul', 'groups'] },
+  { id: 2, title: 'יום 2', tables: [T2], desc: 'כפולות ' + T2, color: 'sky', wordTypes: ['share', 'mul'] },
+  { id: 3, title: 'יום 3', tables: TABLES.slice(), desc: 'כפולות ' + joinHeb(TABLES) + ' מעורבבות', color: 'lilac', wordTypes: ['groups', 'share'] },
+  { id: 4, title: 'יום 4', tables: TABLES.slice(), desc: 'כפולות ' + joinHeb(TABLES) + ' מעורבבות — הכנה למבדק', color: 'peach', wordTypes: ['mul', 'share', 'groups'] }
+];
+
+/* ---------- יצירת תרגילים ---------- */
+function fam(t, k) { return Math.min(t, k) + '-' + Math.max(t, k); }
+function mulEx(t, k) {
+  const [a, b] = (k !== t && rnd(2)) ? [k, t] : [t, k];
+  return { type: 'mul', a, b, ans: t * k, t, k, key: a + 'x' + b, fam: fam(t, k) };
+}
+function divEx(t, k, byTable) {
+  // byTable=true: (t·k) ÷ t = k   |   byTable=false: (t·k) ÷ k = t
+  const a = t * k, b = byTable ? t : k, ans = byTable ? k : t;
+  return { type: 'div', a, b, ans, t, k, key: a + '/' + b, fam: fam(t, k) };
+}
+function split(n, tables) {
+  const base = Math.floor(n / tables.length), counts = {};
+  tables.forEach(t => counts[t] = base);
+  shuffle(tables).slice(0, n - base * tables.length).forEach(t => counts[t]++);
+  return counts;
+}
+function mulFacts(t, c) {
+  let pool = [];
+  while (pool.length < c) pool = pool.concat(shuffle(range(2, MAX)));
+  return pool.slice(0, c).map(k => mulEx(t, k));
+}
+function divFacts(t, c) {
+  const out = [];
+  for (const k of shuffle(range(2, MAX))) { if (out.length >= c) break; out.push(divEx(t, k, true)); }
+  // אם צריך עוד תרגילים — חילוק במספר השני מאותה משפחה (למשל 18÷6), כדי לא לחזור על תרגיל זהה
+  if (out.length < c) for (const k of shuffle(range(2, MAX).filter(k => k !== t))) { if (out.length >= c) break; out.push(divEx(t, k, false)); }
+  let extra = [];
+  while (out.length < c) { if (!extra.length) extra = shuffle(range(1, MAX)); out.push(divEx(t, extra.pop(), true)); }
+  return out;
+}
+function noAdjacent(list, checkFam) {
+  for (let i = 1; i < list.length; i++) {
+    if (list[i].key === list[i - 1].key) return false;
+    if (checkFam && list[i].fam === list[i - 1].fam) return false;
+  }
+  return true;
+}
+function arrange(list) {
+  for (let i = 0; i < 400; i++) { const s = shuffle(list); if (noAdjacent(s, true)) return s; }
+  for (let i = 0; i < 400; i++) { const s = shuffle(list); if (noAdjacent(s, false)) return s; }
+  return shuffle(list);
+}
+function buildDay(day) {
+  const mc = split(MUL_COUNT, day.tables), dc = split(DIV_COUNT, day.tables);
+  let list = [];
+  // בימים המעורבים: מנסות שוב אם אותה עובדת כפל (למשל 2×3 ו־3×2) נבחרה פעמיים
+  for (let tries = 0; tries < 60; tries++) {
+    list = [];
+    day.tables.forEach(t => { list = list.concat(mulFacts(t, mc[t]), divFacts(t, dc[t])); });
+    const mulFams = list.filter(x => x.type === 'mul').map(x => x.fam);
+    const keys = list.map(x => x.key);
+    if (new Set(mulFams).size === mulFams.length && new Set(keys).size === keys.length) break;
+  }
+  return arrange(list);
+}
+
+/* ---------- רמזים והסברים ---------- */
+function repeatAdd(t, k) { return Array(k).fill(t).join(' + '); }
+function hintHTML(ex) {
+  const { a, b, t, k } = ex;
+  if (ex.type === 'div') {
+    let s = `בחילוק חושבות על כפל: ${m(b + ' × ? = ' + a)}<br>${b} כפול כמה שווה ${a}?`;
+    if (b !== t) s += ` (אפשר לחשוב על כפולות ${t})`;
+    return s;
+  }
+  if (k === 1) return `כל מספר כפול 1 שווה לעצמו. מה ${m(a + ' × ' + b)}?`;
+  if (a === k && k > t) return `אפשר להחליף את הסדר: ${m(k + ' × ' + t)} שווה ל־${m(t + ' × ' + k)}.<br>ספרי בקפיצות של ${t}, ${k} קפיצות.`;
+  if (k <= 5) return `כפל הוא חיבור חוזר:<br>${m(repeatAdd(t, k) + ' = ?')}`;
+  if (k === 10) return `כשכופלות ב־10, מוסיפות 0 בסוף המספר. מה ${m(t + ' × 10')}?`;
+  return `התחילי מכפולה קרובה: ${m(t + ' × ' + (k - 1) + ' = ' + t * (k - 1))}<br>כמה זה ועוד ${t}?`;
+}
+function solutionHTML(ex) {
+  const { a, b, ans, t, k } = ex;
+  if (ex.type === 'div') {
+    return `<div class="sol-main">${m(a + ' ÷ ' + b + ' = ' + ans)}</div>
+      <div>כי ${m(b + ' × ' + ans + ' = ' + a)}. בחילוק שואלות: ${b} כפול כמה שווה ${a}?</div>`;
+  }
+  let why;
+  if (k === 1) why = 'כל מספר כפול 1 שווה לעצמו';
+  else if (k <= 5) why = `כי ${m(repeatAdd(t, k) + ' = ' + ans)}`;
+  else if (k === 10) why = `כי כשכופלות ב־10 מוסיפות 0: ${t} הופך ל־${ans}`;
+  else why = `כי ${m(t + ' × ' + (k - 1) + ' = ' + t * (k - 1))}, ועוד ${t} זה ${ans}`;
+  return `<div class="sol-main">${m(a + ' × ' + b + ' = ' + ans)}</div><div>${why}.</div>`;
+}
+
+/* ---------- בעיות מילוליות ---------- */
+const NAMES = ['חיה', 'מושקא', 'רבקה', 'לאה', 'שרה', 'דבורה', 'חנה', 'רחל', 'מירי', 'שטערנא'];
+const WORD_TEMPLATES = {
+  // כפל: כמה יש בסך הכל (k קבוצות, בכל אחת t)
+  mul: [
+    (n, t, k, tot) => ({ text: `ל${n} יש ${k} דפים של מדבקות. בכל דף יש ${t} מדבקות. כמה מדבקות יש ל${n} בסך הכל?`, words: `ל${n} יש ${tot} מדבקות בסך הכל.` }),
+    (n, t, k, tot) => ({ text: `${n} הכינה ${k} שקיות. בכל שקית היא שמה ${t} חרוזים. כמה חרוזים שמה ${n} בסך הכל?`, words: `${n} שמה ${tot} חרוזים בסך הכל.` }),
+    (n, t, k, tot) => ({ text: `בכיתה יש ${k} מדפים. על כל מדף יש ${t} ספרים. כמה ספרים יש על כל המדפים יחד?`, words: `על כל המדפים יחד יש ${tot} ספרים.` }),
+    (n, t, k, tot) => ({ text: `ל${n} יש ${k} קלמרים. בכל קלמר יש ${t} עפרונות. כמה עפרונות יש לה בסך הכל?`, words: `ל${n} יש ${tot} עפרונות בסך הכל.` })
+  ],
+  // חלוקה שווה: מחלקות tot ל־t חלקים — כמה בכל חלק
+  share: [
+    (n, t, k, tot) => ({ text: `ל${n} יש ${tot} מדבקות. היא מחלקת אותן שווה בשווה ל־${t} חברות. כמה מדבקות תקבל כל חברה?`, words: `כל חברה תקבל ${k} מדבקות.` }),
+    (n, t, k, tot) => ({ text: `${tot} עפרונות מחולקים שווה בשווה ל־${t} קלמרים. כמה עפרונות יהיו בכל קלמר?`, words: `בכל קלמר יהיו ${k} עפרונות.` }),
+    (n, t, k, tot) => ({ text: `${n} סידרה ${tot} ספרים שווה בשווה על ${t} מדפים. כמה ספרים יש על כל מדף?`, words: `על כל מדף יש ${k} ספרים.` }),
+    (n, t, k, tot) => ({ text: `${n} מחלקת ${tot} חרוזים שווה בשווה ל־${t} שקיות. כמה חרוזים יהיו בכל שקית?`, words: `בכל שקית יהיו ${k} חרוזים.` })
+  ],
+  // מציאת מספר קבוצות: כמה קבוצות של t יש ב־tot
+  groups: [
+    (n, t, k, tot) => ({ text: `ל${n} יש ${tot} חרוזים. לכל צמיד היא צריכה ${t} חרוזים. כמה צמידים היא יכולה להכין?`, words: `${n} יכולה להכין ${k} צמידים.` }),
+    (n, t, k, tot) => ({ text: `יש ${tot} עפרונות. שמים ${t} עפרונות בכל קופסה. כמה קופסאות ימלאו?`, words: `ימלאו ${k} קופסאות.` }),
+    (n, t, k, tot) => ({ text: `${n} מכניסה ${tot} מדבקות לשקיות, ${t} מדבקות בכל שקית. כמה שקיות היא תמלא?`, words: `${n} תמלא ${k} שקיות.` }),
+    (n, t, k, tot) => ({ text: `יש ${tot} ספרים. כל תלמידה מקבלת ${t} ספרים. לכמה תלמידות יספיקו הספרים?`, words: `הספרים יספיקו ל־${k} תלמידות.` })
+  ]
+};
+function genWord(day) {
+  const type = pick(day.wordTypes);
+  const idx = pickFresh('word' + day.id + type, range(0, WORD_TEMPLATES[type].length - 1));
+  const t = pick(day.tables), k = pick(range(2, MAX)), n = pick(NAMES), tot = t * k;
+  const base = WORD_TEMPLATES[type][idx](n, t, k, tot);
+  if (type === 'mul') return Object.assign(base, { type, op: 'mul', t, k, tot, ans: tot, expr: k + ' × ' + t + ' = ' + tot });
+  return Object.assign(base, { type, op: 'div', t, k, tot, ans: k, expr: tot + ' ÷ ' + t + ' = ' + k });
+}
+function wordOpHint(w) {
+  if (w.op === 'mul') return 'יש כמה קבוצות שוות, ובכל קבוצה אותו מספר. כשמחפשות כמה יש <b>בסך הכל</b> — זה כפל.';
+  if (w.type === 'share') return 'מחלקות כמות אחת <b>שווה בשווה</b> — זה חילוק.';
+  return `מחפשות <b>כמה קבוצות</b> של ${w.t} יש ב־${w.tot} — זה חילוק.`;
+}
+function wordNumHint(w) {
+  if (w.op === 'mul') return `חשבי ${m(w.k + ' × ' + w.t)}. אפשר לספור בקפיצות של ${w.t}.`;
+  return `חשבי על כפל: ${m(w.t + ' × ? = ' + w.tot)}<br>${w.t} כפול כמה שווה ${w.tot}?`;
+}
+function wordSolutionHTML(w, good) {
+  return `<div class="sol-card${good ? ' good' : ''}"><div>התרגיל: ${m(w.expr)}</div><div><b>תשובה:</b> ${w.words}</div></div>`;
+}
+
+/* ---------- משפטי עידוד ---------- */
+const PRAISE = ['כל הכבוד! 🌟', 'יפה מאוד!', 'מצוין, את בדרך הנכונה!', 'בדיוק! ✨', 'נהדר, ממשיכות!', 'את מתחזקת מתרגיל לתרגיל!', 'וואו, איזה יופי!', 'תשובה נכונה! 💜', 'את אלופה!', 'כן! ידעת את זה!'];
+const PRAISE_HINT = ['יפה! הרמז עזר ואת הצלחת 💪', 'מעולה, תיקנת בעצמך!', 'נהדר! ככה לומדות.', 'כל הכבוד שניסית שוב!'];
+const GENTLE = ['כמעט! הנה רמז קטן 🌱', 'לא נורא, נחשוב יחד:', 'ננסה שוב — הנה עזרה קטנה:'];
+const END_MSG = [
+  'כל הכבוד על ההתמדה! כל תרגול קטן מחזק את הזיכרון, ומחר יהיה עוד יותר קל.',
+  'התמדת עד הסוף — וזה הכי חשוב. עם כל יום את מתחזקת!',
+  'יפה מאוד! גם טעויות הן חלק מהלמידה. ככה מתקדמות צעד אחר צעד.'
+];
+
+/* ---------- שמירה מקומית ---------- */
+const STORAGE_KEY = 'kefel-progress::tables-' + TABLES.join('-') + '::max-' + MAX;
+let storageOK = false;
+try { const k = '__kefel_test__'; localStorage.setItem(k, '1'); localStorage.removeItem(k); storageOK = true; } catch (e) { storageOK = false; }
+let memDone = [];
+function getDone() {
+  if (storageOK) {
+    try { const v = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); return Array.isArray(v) ? v : []; }
+    catch (e) { return memDone.slice(); }
+  }
+  return memDone.slice();
+}
+function markDone(id) {
+  const d = getDone(); if (!d.includes(id)) d.push(id);
+  memDone = d.slice();
+  if (storageOK) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); } catch (e) { storageOK = false; } }
+}
+function resetDone() {
+  memDone = [];
+  if (storageOK) { try { localStorage.removeItem(STORAGE_KEY); } catch (e) { } }
+}
+
+/* ---------- דמות ואנימציות ---------- */
+const MASCOT = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <polygon points="50,8 62.9,36.2 93.7,39.8 70.9,60.8 77,91.2 50,76 23,91.2 29.1,60.8 6.3,39.8 37.1,36.2"
+    fill="#ffd96b" stroke="#f2b33d" stroke-width="7" stroke-linejoin="round"/>
+  <ellipse cx="35" cy="61" rx="5" ry="3.2" fill="#f7a4c4" opacity=".85"/>
+  <ellipse cx="65" cy="61" rx="5" ry="3.2" fill="#f7a4c4" opacity=".85"/>
+  <circle cx="41" cy="52" r="4" fill="#3b2d5c"/><circle cx="59" cy="52" r="4" fill="#3b2d5c"/>
+  <circle cx="42.3" cy="50.6" r="1.4" fill="#fff"/><circle cx="60.3" cy="50.6" r="1.4" fill="#fff"/>
+  <path d="M43 60 Q50 68 57 60" fill="none" stroke="#3b2d5c" stroke-width="3" stroke-linecap="round"/>
+</svg>`;
+const reduceMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function animateMascot(cls) {
+  const el = document.getElementById('mascot'); if (!el) return;
+  el.classList.remove('hop', 'think'); void el.offsetWidth; el.classList.add(cls);
+}
+function sparkle() {
+  if (reduceMotion()) return;
+  const box = document.getElementById('sparkles'); if (!box) return;
+  box.innerHTML = '';
+  const dirs = [[-46, -30], [46, -30], [-54, 10], [54, 10], [-24, -54], [24, -54], [0, -62]];
+  dirs.forEach(([dx, dy]) => {
+    const s = document.createElement('span'); s.className = 'spark'; s.textContent = '✦';
+    s.style.setProperty('--dx', dx + 'px'); s.style.setProperty('--dy', dy + 'px');
+    box.appendChild(s);
+  });
+  setTimeout(() => { if (box) box.innerHTML = ''; }, 900);
+}
+function confetti(amount) {
+  if (reduceMotion()) return;
+  const box = document.createElement('div'); box.className = 'confetti'; box.setAttribute('aria-hidden', 'true');
+  const colors = ['#f9b8d4', '#b9a6f6', '#9fd0ff', '#a8e6c3', '#ffd26b', '#ffb995'];
+  for (let i = 0; i < (amount || 70); i++) {
+    const p = document.createElement('i');
+    if (i % 6 === 0) { p.className = 'star'; p.textContent = '★'; p.style.color = pick(['#f5b400', '#f28dbd', '#9b82f0']); }
+    p.style.left = (Math.random() * 100) + '%';
+    p.style.background = pick(colors);
+    p.style.animationDuration = (1.5 + Math.random() * 1.1) + 's';
+    p.style.animationDelay = (Math.random() * .35) + 's';
+    p.style.setProperty('--rot', (rnd(720) - 360) + 'deg');
+    box.appendChild(p);
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 3200);
+}
+
+/* ---------- מצב ---------- */
+const app = document.getElementById('app');
+const state = {
+  token: 0, timer: null, day: null, mode: 'day', phase: 'exercise',
+  list: [], idx: 0, attempts: 0, locked: false,
+  results: [], mistakes: [], reviewMistakes: [],
+  word: null, wordAttempts: 0, wordFirst: false, op: null, lastSummary: null
+};
+function clearTimer() { if (state.timer) { clearTimeout(state.timer); state.timer = null; } }
+function newSession() { clearTimer(); state.token++; state.locked = false; }
+function later(ms, fn) {
+  clearTimer(); const tok = state.token;
+  state.timer = setTimeout(() => { state.timer = null; if (tok === state.token) fn(); }, ms);
+}
+const $ = id => document.getElementById(id);
+
+/* ---------- מסך ראשי ---------- */
+function renderMenu() {
+  newSession();
+  state.phase = 'menu';
+  const done = getDone();
+  app.innerHTML = `
+  <header class="hero">
+    <div class="mascot mascot-sm" id="mascot">${MASCOT}</div>
+    <h1>כמה דקות ביום — <span>מתחזקות בכפל ובחילוק</span></h1>
+    <p class="lead">בחרי יום ונתחיל לתרגל. אין שעון ואין מהירות — רק את, בקצב שלך 🌸</p>
+  </header>
+  <main class="days">
+    ${DAYS.map(d => {
+      const isDone = done.includes(d.id);
+      return `<button type="button" class="day-card c-${d.color}${isDone ? ' done' : ''}" data-day="${d.id}"
+        aria-label="${d.title}: ${d.desc}. 20 תרגילים ובעיה מילולית.${isDone ? ' הושלם.' : ''}">
+        <span class="day-title">${d.title}</span>
+        <span class="day-desc">${d.desc}</span>
+        <span class="day-struct">20 תרגילים ובעיה מילולית</span>
+        <span class="day-status"><span class="pill">${isDone ? '✓ הושלם · אפשר לתרגל שוב' : 'להתחלה ←'}</span></span>
+      </button>`;
+    }).join('')}
+  </main>
+  <footer class="foot">
+    <p class="note">${storageOK
+      ? 'הימים שהושלמו נשמרים רק במכשיר ובדפדפן האלה.'
+      : 'שימי לב: כרגע אי אפשר לשמור, ולכן ההתקדמות לא תישמר אחרי סגירת הדף. התרגול עובד כרגיל.'}</p>
+    <button type="button" class="link-btn" id="resetBtn">איפוס התקדמות</button>
+  </footer>`;
+  app.querySelectorAll('.day-card').forEach(b => b.addEventListener('click', () => startDay(Number(b.dataset.day))));
+  $('resetBtn').addEventListener('click', () => {
+    if (window.confirm('למחוק את סימון הימים שהושלמו? אי אפשר לבטל את הפעולה.')) { resetDone(); renderMenu(); }
+  });
+  window.scrollTo(0, 0);
+}
+
+/* ---------- מסך תרגול ---------- */
+function renderPracticeShell(title, sub, bubbleText) {
+  app.innerHTML = `
+  <div class="topbar">
+    <button type="button" class="back-btn" id="backBtn">→ לתפריט</button>
+    <div class="topinfo"><strong>${title}</strong><span>${sub}</span></div>
+  </div>
+  <section class="card">
+    <div class="progress-text" id="progText"></div>
+    <div class="progress" id="progBar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="התקדמות"><div class="progress-fill" id="progFill"></div></div>
+    <div class="stage">
+      <div class="mascot-wrap"><div class="mascot" id="mascot">${MASCOT}</div><div class="sparkles" id="sparkles"></div></div>
+      <div class="bubble" id="bubble" aria-live="polite">${bubbleText}</div>
+    </div>
+    <div id="qArea"></div>
+  </section>`;
+  $('backBtn').addEventListener('click', renderMenu);
+  window.scrollTo(0, 0);
+}
+function setBubble(text, kind) {
+  const b = $('bubble'); if (!b) return;
+  b.className = 'bubble' + (kind ? ' ' + kind : '');
+  b.innerHTML = text; void b.offsetWidth; b.classList.add('pop');
+}
+function setProgress(doneCount, total, text) {
+  const pct = total ? Math.round(doneCount / total * 100) : 100;
+  $('progText').textContent = text;
+  $('progFill').style.width = pct + '%';
+  $('progBar').setAttribute('aria-valuenow', String(pct));
+}
+function focusInput() { const i = $('ans'); if (i) { try { i.focus({ preventScroll: true }); } catch (e) { i.focus(); } } }
+function lockInput(lock) {
+  const i = $('ans'), c = $('checkBtn');
+  if (i) i.readOnly = lock;
+  if (c) c.disabled = lock;
+  document.querySelectorAll('.op-btn').forEach(b => b.disabled = lock);
+}
+function readNumber() {
+  const v = ($('ans').value || '').trim();
+  if (!/^\d{1,4}$/.test(v)) return null;
+  return parseInt(v, 10);
+}
+// בדיקה בלחיצה על ״בדיקה״ או במקש Enter — בלי טופס, כדי שיעבוד גם בחלונות תצוגה מקדימה מוגבלים
+function bindCheck(handler) {
+  $('checkBtn').addEventListener('click', handler);
+  $('ans').addEventListener('keydown', e => { if (e.key === 'Enter' || e.keyCode === 13) handler(e); });
+}
+function digitsOnly(e) { const v = e.target.value.replace(/[^\d]/g, ''); if (v !== e.target.value) e.target.value = v; }
+
+function startDay(id) {
+  newSession();
+  const day = DAYS.find(d => d.id === id);
+  Object.assign(state, { day, mode: 'day', phase: 'exercise', list: buildDay(day), idx: 0, attempts: 0, results: [], mistakes: [], wordFirst: false });
+  renderPracticeShell(day.title, day.desc, 'בואי נתחיל! 🌸 קראי את התרגיל והקלידי תשובה.');
+  showExercise();
+}
+function startReview(items) {
+  newSession();
+  Object.assign(state, { mode: 'review', phase: 'exercise', list: arrange(items.map(x => Object.assign({}, x))), idx: 0, attempts: 0, reviewMistakes: [] });
+  renderPracticeShell('חזרה', 'על מה שהיה מאתגר', 'חוזרות על מה שהיה מאתגר — את יכולה! 💪');
+  showExercise();
+}
+
+function buildExerciseArea() {
+  $('qArea').innerHTML = `
+    <div class="exercise" id="exText" dir="ltr" aria-live="polite"></div>
+    <div class="answer-row" id="ansForm">
+      <label for="ans" class="sr-only">התשובה שלך</label>
+      <input id="ans" type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" maxlength="4" dir="ltr" placeholder="?" autocomplete="off">
+      <button type="button" class="btn primary" id="checkBtn">בדיקה</button>
+    </div>
+    <div class="help" id="help" aria-live="polite"></div>
+    <div class="continue-row" id="contRow" hidden><button type="button" class="btn secondary" id="contBtn">ממשיכות ←</button></div>`;
+  $('ans').addEventListener('input', digitsOnly);
+  bindCheck(onCheckExercise);
+  $('contBtn').addEventListener('click', () => { if (state.phase === 'exercise') nextItem(); });
+}
+function showExercise() {
+  state.phase = 'exercise'; state.attempts = 0; state.locked = false;
+  if (!$('ansForm') || !$('exText')) buildExerciseArea();
+  const ex = state.list[state.idx], n = state.list.length;
+  $('exText').innerHTML = `<span>${ex.a}</span><span class="op">${ex.type === 'mul' ? '×' : '÷'}</span><span>${ex.b}</span><span>=</span><span class="qmark" id="qmark">?</span>`;
+  $('exText').setAttribute('aria-label', `${ex.a} ${ex.type === 'mul' ? 'כפול' : 'לחלק ל'} ${ex.b}`);
+  $('ans').value = ''; $('help').innerHTML = ''; $('contRow').hidden = true;
+  lockInput(false);
+  setProgress(state.idx, n, (state.mode === 'review' ? 'חזרה: ' : '') + `תרגיל ${state.idx + 1} מתוך ${n}`);
+  focusInput();
+}
+function record(ex, first) {
+  if (state.mode === 'day') state.results.push({ type: ex.type, first });
+}
+function addMistake(ex) {
+  const target = state.mode === 'day' ? state.mistakes : state.reviewMistakes;
+  if (!target.some(x => x.key === ex.key)) target.push(ex);
+}
+function onCheckExercise(e) {
+  e.preventDefault();
+  if (state.locked || state.phase !== 'exercise') return;
+  const n = readNumber();
+  if (n === null) { setBubble('הקלידי מספר, ואז לחצי על ״בדיקה״ 🙂', 'info'); focusInput(); return; }
+  const ex = state.list[state.idx];
+  if (n === ex.ans) {
+    state.locked = true; lockInput(true);
+    record(ex, state.attempts === 0);
+    const q = $('qmark'); q.textContent = ex.ans; q.classList.add('ok');
+    $('help').innerHTML = '';
+    animateMascot('hop'); sparkle();
+    setBubble(state.attempts === 0 ? pickFresh('praise', PRAISE) : pickFresh('praiseHint', PRAISE_HINT), 'ok');
+    setProgress(state.idx + 1, state.list.length, $('progText').textContent);
+    later(2000, nextItem);
+    return;
+  }
+  state.attempts++;
+  animateMascot('think');
+  if (state.attempts === 1) {
+    addMistake(ex);
+    setBubble(pickFresh('gentle', GENTLE), 'hint');
+    $('help').innerHTML = `<div class="hint-card">${hintHTML(ex)}</div>`;
+    $('ans').value = ''; focusInput();
+  } else {
+    state.locked = true; lockInput(true);
+    record(ex, false);
+    const q = $('qmark'); q.textContent = ex.ans; q.classList.add('shown');
+    setBubble('לא נורא — ככה לומדות. הנה הפתרון:', 'sol');
+    $('help').innerHTML = `<div class="sol-card">${solutionHTML(ex)}</div>`;
+    $('contRow').hidden = false;
+    setProgress(state.idx + 1, state.list.length, $('progText').textContent);
+    $('contBtn').focus();
+  }
+}
+function nextItem() {
+  clearTimer();
+  state.idx++;
+  if (state.idx < state.list.length) showExercise();
+  else if (state.mode === 'day') startWord();
+  else renderReviewDone();
+}
+
+/* ---------- בעיה מילולית ---------- */
+function startWord() {
+  Object.assign(state, { phase: 'word', word: genWord(state.day), wordAttempts: 0, op: null, locked: false });
+  const w = state.word;
+  $('qArea').innerHTML = `
+    <span class="word-badge">בעיה מילולית</span>
+    <p class="word-text">${w.text}</p>
+    <div class="op-label" id="opLabel">איזו פעולה מתאימה?</div>
+    <div class="op-choose" role="group" aria-labelledby="opLabel">
+      <button type="button" class="op-btn" data-op="mul" aria-pressed="false"><span class="op-sym">×</span>כפל</button>
+      <button type="button" class="op-btn" data-op="div" aria-pressed="false"><span class="op-sym">÷</span>חילוק</button>
+    </div>
+    <div class="answer-row" id="ansForm">
+      <label for="ans" class="sr-only">התשובה שלך</label>
+      <input id="ans" type="text" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" maxlength="4" dir="ltr" placeholder="?" autocomplete="off">
+      <button type="button" class="btn primary" id="checkBtn">בדיקה</button>
+    </div>
+    <div class="help" id="help" aria-live="polite"></div>
+    <div class="continue-row" id="contRow" hidden><button type="button" class="btn secondary" id="contBtn">ממשיכות ←</button></div>`;
+  document.querySelectorAll('.op-btn').forEach(b => b.addEventListener('click', () => {
+    if (state.locked) return;
+    state.op = b.dataset.op;
+    document.querySelectorAll('.op-btn').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  }));
+  $('ans').addEventListener('input', digitsOnly);
+  bindCheck(onCheckWord);
+  $('contBtn').addEventListener('click', () => { if (state.phase === 'word') finishDay(); });
+  setProgress(1, 1, 'בעיה מילולית — האחרונה להיום!');
+  setBubble('ועכשיו בעיה מילולית! קראי בעיון, בחרי פעולה והקלידי תשובה.', '');
+}
+function onCheckWord(e) {
+  e.preventDefault();
+  if (state.locked || state.phase !== 'word') return;
+  if (!state.op) { setBubble('בחרי קודם פעולה: כפל או חילוק 🙂', 'info'); return; }
+  const n = readNumber();
+  if (n === null) { setBubble('הקלידי מספר, ואז לחצי על ״בדיקה״ 🙂', 'info'); focusInput(); return; }
+  const w = state.word, opOk = state.op === w.op, numOk = n === w.ans;
+  if (opOk && numOk) {
+    state.locked = true; lockInput(true);
+    state.wordFirst = state.wordAttempts === 0;
+    animateMascot('hop'); sparkle();
+    setBubble(state.wordFirst ? 'מצוין! פתרת את הבעיה המילולית! 🎉' : pickFresh('praiseHint', PRAISE_HINT), 'ok');
+    $('help').innerHTML = wordSolutionHTML(w, true);
+    later(4000, finishDay);
+    return;
+  }
+  state.wordAttempts++;
+  animateMascot('think');
+  if (state.wordAttempts === 1) {
+    setBubble(pickFresh('gentle', GENTLE), 'hint');
+    $('help').innerHTML = `<div class="hint-card">${!opOk ? wordOpHint(w) : wordNumHint(w)}</div>`;
+    $('ans').value = ''; focusInput();
+  } else {
+    state.locked = true; lockInput(true);
+    state.wordFirst = false;
+    document.querySelectorAll('.op-btn').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.op === w.op)));
+    setBubble('לא נורא — ככה לומדות. הנה הפתרון:', 'sol');
+    $('help').innerHTML = wordSolutionHTML(w, false);
+    $('contRow').hidden = false; $('contBtn').focus();
+  }
+}
+
+/* ---------- סיום וסיכום ---------- */
+function finishDay() {
+  clearTimer();
+  if (state.mode !== 'day' || state.phase !== 'word') return;
+  state.phase = 'summary';
+  markDone(state.day.id);
+  const r = state.results;
+  state.lastSummary = {
+    day: state.day,
+    mulFirst: r.filter(x => x.type === 'mul' && x.first).length, mulTotal: r.filter(x => x.type === 'mul').length,
+    divFirst: r.filter(x => x.type === 'div' && x.first).length, divTotal: r.filter(x => x.type === 'div').length,
+    wordFirst: state.wordFirst,
+    mistakes: state.mistakes.slice(),
+    msg: null
+  };
+  const s = state.lastSummary;
+  const perfect = s.mulFirst === s.mulTotal && s.divFirst === s.divTotal && s.wordFirst;
+  s.msg = perfect ? 'כל התשובות נכונות בניסיון הראשון! ההתמדה שלך משתלמת 🌟' : pickFresh('end', END_MSG);
+  renderSummary(true);
+}
+function renderSummary(celebrate) {
+  newSession();
+  state.phase = 'summary';
+  const s = state.lastSummary;
+  app.innerHTML = `
+  <div class="topbar">
+    <button type="button" class="back-btn" id="backBtn">→ לתפריט</button>
+    <div class="topinfo"><strong>${s.day.title}</strong><span>${s.day.desc}</span></div>
+  </div>
+  <section class="card summary">
+    <div class="mascot mascot-lg${celebrate ? ' celebrate' : ''}" id="mascot">${MASCOT}</div>
+    <h2>סיימת את ${s.day.title}! 🎉</h2>
+    <div class="done-note">✓ היום סומן כהושלם</div>
+    <div class="stats">
+      <div class="stat s-mul"><div class="stat-title">כפל</div><div class="stat-num">${s.mulFirst} מתוך ${s.mulTotal}</div><div class="stat-label">נכונות בניסיון הראשון</div></div>
+      <div class="stat s-div"><div class="stat-title">חילוק</div><div class="stat-num">${s.divFirst} מתוך ${s.divTotal}</div><div class="stat-label">נכונות בניסיון הראשון</div></div>
+      <div class="stat s-word"><div class="stat-title">בעיה מילולית</div><div class="stat-num">${s.wordFirst ? 1 : 0} מתוך 1</div><div class="stat-label">${s.wordFirst ? 'נפתרה בניסיון הראשון' : 'נפתרה בעזרת רמז — גם זה לימוד!'}</div></div>
+    </div>
+    <p class="encourage">${s.msg}</p>
+    <div class="actions">
+      ${s.mistakes.length ? `<button type="button" class="btn primary" id="reviewBtn">נתרגל שוב את מה שהיה מאתגר</button>` : ''}
+      <button type="button" class="btn secondary" id="againBtn">לתרגל שוב את ${s.day.title}</button>
+      <button type="button" class="btn soft" id="menuBtn">חזרה לתפריט</button>
+    </div>
+  </section>`;
+  $('backBtn').addEventListener('click', renderMenu);
+  $('menuBtn').addEventListener('click', renderMenu);
+  $('againBtn').addEventListener('click', () => startDay(s.day.id));
+  if ($('reviewBtn')) $('reviewBtn').addEventListener('click', () => startReview(s.mistakes));
+  window.scrollTo(0, 0);
+  if (celebrate) confetti(80);
+}
+function renderReviewDone() {
+  newSession();
+  state.phase = 'reviewDone';
+  const more = state.reviewMistakes.slice();
+  app.innerHTML = `
+  <div class="topbar">
+    <button type="button" class="back-btn" id="backBtn">→ לתפריט</button>
+    <div class="topinfo"><strong>חזרה</strong><span>על מה שהיה מאתגר</span></div>
+  </div>
+  <section class="card summary">
+    <div class="mascot mascot-lg celebrate" id="mascot">${MASCOT}</div>
+    <h2>סיימת את החזרה! 💪</h2>
+    <p class="encourage">${more.length ? 'כל הכבוד! עוד קצת תרגול — והתרגילים האלה יהיו קלים.' : 'וואו! הפעם הכול הצליח. רואים שהתרגול עוזר!'}<br>התוצאה של היום נשמרה כמו שהייתה.</p>
+    <div class="actions">
+      ${more.length ? `<button type="button" class="btn primary" id="reviewBtn">נתרגל שוב את מה שהיה מאתגר</button>` : ''}
+      ${state.lastSummary ? `<button type="button" class="btn secondary" id="sumBtn">חזרה לסיכום</button>` : ''}
+      <button type="button" class="btn soft" id="menuBtn">חזרה לתפריט</button>
+    </div>
+  </section>`;
+  $('backBtn').addEventListener('click', renderMenu);
+  $('menuBtn').addEventListener('click', renderMenu);
+  if ($('sumBtn')) $('sumBtn').addEventListener('click', () => renderSummary(false));
+  if ($('reviewBtn')) $('reviewBtn').addEventListener('click', () => startReview(more));
+  window.scrollTo(0, 0);
+  confetti(40);
+}
+
+renderMenu();
+</script>
+</body>
+</html>
